@@ -2,6 +2,7 @@ package code;
 
 import java.io.*;
 import java.net.*;
+import code.ServerThread;
 
 public class Server {
 
@@ -15,15 +16,13 @@ public class Server {
                 Socket socket = serverSocket.accept();
  
                 System.out.println("New client connected");
- 
-                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+                
+                ServerThread serverThread = new ServerThread(socket);
+                serverThread.start();
             }
- 
-        } catch (IOException ex) {
+        }
+        catch (IOException ex) {
             System.out.println("Server exception: " + ex.getMessage());
         }
 	}
-
 }
