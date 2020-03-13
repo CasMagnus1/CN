@@ -17,6 +17,16 @@ public class ServerThread extends Thread{
 	
 	public void run() {
 		System.out.println("thread is run");
+		String newLine;
+		try {
+			while((newLine = in.readLine()) != null) {
+				// luisteren naar socket
+			}
+		}
+		catch (IOException ex) {
+			System.out.println("readLine exception: " + ex.getMessage());
+		}
+
 	}
 	
 	
