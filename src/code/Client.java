@@ -12,10 +12,27 @@ public class Client {
 	        int port = Integer.parseInt(args[2]);
 	        String language = args[3];
 	        
-        	//URI nog parsen
         	Socket socket = new Socket(uri.getHost(), port);
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            
+            if (httpCommand.equals("GET")) {
+            	//send get request
+            }
+            if (httpCommand.equals("HEAD")) {
+            	//send head request
+            }
+            if (httpCommand.equals("PUT")) {
+            	//send put request
+            }
+            if (httpCommand.equals("POST")) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+                System.out.println("type what you want to send: ");
+                String stringToSend = in.readLine();
+                //send post request met stringToSend als body
+            }
+            
+            
 		}
 		catch(URISyntaxException ex) {
 			System.out.println("URI expection: " + ex.getMessage());
