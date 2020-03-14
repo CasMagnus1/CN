@@ -3,6 +3,10 @@ package code;
 import java.io.*;
 import java.net.*;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
 public class Client {
 
 	public static void main(String[] args) {
@@ -30,10 +34,25 @@ public class Client {
             }
         	
         	//receive response
+  	        PrintWriter writer = new PrintWriter("response.txt");
+  	        
+			String html = "<p>An <a href='http://example.com/'><b>example</b></a> link.</p>";
+			Document doc = Jsoup.parse(html);
+			Element link = doc.select("a").first();
+  	        
+			//mss aparte thread?
     		String newLine;
 			while((newLine = reader.readLine()) != null) {
 				System.out.println(newLine);
+				writer.println(newLine);
+				//without flush only writes half response
+				writer.flush();
 			}
+			
+
+
+			
+
 			
            
 		}
