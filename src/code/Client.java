@@ -6,6 +6,7 @@ import java.net.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class Client {
 
@@ -17,40 +18,66 @@ public class Client {
 	        String language = args[3];
 	        
         	Socket socket = new Socket(uri.getHost(), port);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader socketIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter socketOut = new PrintWriter(socket.getOutputStream(), true);
+            
+            BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+            
             
         	//send request
-        	out.println(httpCommand + " " + uri.getPath() + " HTTP/1.1");
-        	out.println("Host: " + uri.getHost());
-        	out.println("Accept-Language: " + language);
-        	out.println("");
+        	socketOut.println(httpCommand + " " + uri.getPath() + " HTTP/1.1");
+        	socketOut.println("Host: " + uri.getHost());
+        	socketOut.println("Accept-Language: " + language);
+        	socketOut.println("");
         	
             if (httpCommand.equals("POST") || httpCommand.equals("PUT")) {
-            	//include body
-                BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
                 System.out.println("type what you want to send: ");
-                String stringToSend = in.readLine();
+                String stringToSend = stdIn.readLine();
+                socketOut.println(stringToSend);
             }
         	
         	//receive response
-  	        PrintWriter writer = new PrintWriter("response.txt");
-  	        
-			String html = "<p>An <a href='http://example.com/'><b>example</b></a> link.</p>";
-			Document doc = Jsoup.parse(html);
-			Element link = doc.select("a").first();
-  	        
-			//mss aparte thread?
+  	        PrintWriter writer = new PrintWriter("body.html");
+  	        boolean pastHeaders = false;
+  	        boolean chunked = false;
+  	        boolean endOfChunks = false;
     		String newLine;
-			while((newLine = reader.readLine()) != null) {
+			//zien naar content length of 0 (bij chuncked) om te stoppen met luisteren
+			while((newLine = socketIn.readLine()) != null) {
 				System.out.println(newLine);
-				writer.println(newLine);
-				//without flush only writes half response
-				writer.flush();
+				
+				if (pastHeaders) {
+					if (chunked) {
+						if (newLine.equals("0")) {
+							endOfChunks = true;
+						}
+						if (!endOfChunks && !isChunkSize(newLine)) {
+							writer.println(newLine);
+							writer.flush();
+						}
+					}
+					else {
+						writer.println(newLine);
+						writer.flush();
+					}
+				}
+				else {
+					if (newLine.equals("Transfer-Encoding: chunked")) {
+						chunked = true;
+					}
+					if (newLine.equals("")) {
+						pastHeaders = true;
+					}
+				}
 			}
 			
-
-
+//			File file = new File("C:\\Users\\casma\\git\\CN\\src\\code\\fileToServe.html");
+//			Document doc = Jsoup.parse(file, "UTF-8");
+//			Elements imgs = doc.getElementsByTag("img");
+//			for (Element img : imgs) {
+//			  String imgLocation = img.attr("src");
+//			  System.out.println(imgLocation);
+//			}	 
 			
 
 			
@@ -63,7 +90,29 @@ public class Client {
             System.out.println("Server not found: " + ex.getMessage());
         }
 		catch (IOException ex) {
-            System.out.println("I/O or readLine error: " + ex.getMessage());
+            System.out.println("I/O error: " + ex.getMessage());
         }
     }
+	
+	
+	public static boolean isHexadecimal(String nb) {
+		try {
+			Long.parseLong(nb, 16);
+			return true;
+		}
+		catch (NumberFormatException ex) {
+			return false;
+		}
+	}
+	
+	public static boolean isChunkSize(String line) {
+		int indexOfFirstSemiColon = line.indexOf(";");
+		if (indexOfFirstSemiColon == -1) {
+			//no semicolon in line
+			return isHexadecimal(line);
+		}
+		else {
+			return isHexadecimal(line.substring(0, indexOfFirstSemiColon));
+		}
+	}
 }
