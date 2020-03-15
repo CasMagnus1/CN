@@ -12,28 +12,27 @@ public class Client {
 
 	public static void main(String[] args) {
 		try {
+			//setup connection
 			String httpCommand = args[0];
 			URI uri = new URI(args[1]);
 	        int port = Integer.parseInt(args[2]);
 	        String language = args[3];
 	        
         	Socket socket = new Socket(uri.getHost(), port);
-            BufferedReader socketIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter socketOut = new PrintWriter(socket.getOutputStream(), true);
-            
-            BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
-            
+            BufferedReader socketInChar = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter socketOutChar = new PrintWriter(socket.getOutputStream(), true);            
             
         	//send request
-        	socketOut.println(httpCommand + " " + uri.getPath() + " HTTP/1.1");
-        	socketOut.println("Host: " + uri.getHost());
-        	socketOut.println("Accept-Language: " + language);
-        	socketOut.println("");
+        	socketOutChar.println(httpCommand + " " + uri.getPath() + " HTTP/1.1");
+        	socketOutChar.println("Host: " + uri.getHost());
+        	socketOutChar.println("Accept-Language: " + language);
+        	socketOutChar.println("");
         	
             if (httpCommand.equals("POST") || httpCommand.equals("PUT")) {
+                BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
                 System.out.println("type what you want to send: ");
                 String stringToSend = stdIn.readLine();
-                socketOut.println(stringToSend);
+                socketOutChar.println(stringToSend);
             }
         	
         	//receive response
@@ -42,8 +41,9 @@ public class Client {
   	        boolean chunked = false;
   	        boolean endOfChunks = false;
     		String newLine;
-			//zien naar content length of 0 (bij chuncked) om te stoppen met luisteren
-			while((newLine = socketIn.readLine()) != null) {
+			//zien naar content length (kijken naar bytestream ipv character stream, hoezo character
+    		//stream automatisch juiste encodering?)
+			while((newLine = socketInChar.readLine()) != null && !endOfChunks) {
 				System.out.println(newLine);
 				
 				if (pastHeaders) {
@@ -51,7 +51,7 @@ public class Client {
 						if (newLine.equals("0")) {
 							endOfChunks = true;
 						}
-						if (!endOfChunks && !isChunkSize(newLine)) {
+						if (!endOfChunks && !containsChunkSize(newLine)) {
 							writer.println(newLine);
 							writer.flush();
 						}
@@ -71,14 +71,25 @@ public class Client {
 				}
 			}
 			
-//			File file = new File("C:\\Users\\casma\\git\\CN\\src\\code\\fileToServe.html");
-//			Document doc = Jsoup.parse(file, "UTF-8");
-//			Elements imgs = doc.getElementsByTag("img");
+			//GET embedded imgs
+			File file = new File("C:\\Users\\casma\\git\\CN\\body.html");
+			Document doc = Jsoup.parse(file, "UTF-8");
+			Elements imgs = doc.getElementsByTag("img");
 //			for (Element img : imgs) {
 //			  String imgLocation = img.attr("src");
 //			  System.out.println(imgLocation);
 //			}	 
 			
+			System.out.println(imgs.first().attr("src"));
+        	socketOutChar.println("GET " + imgs.first().attr("src") + " HTTP/1.1");
+        	socketOutChar.println("Host: " + uri.getHost());
+        	socketOutChar.println("Accept-Language: " + language);
+        	socketOutChar.println("");
+        	
+        	//vermoedelijk metadata in body, ook chunked ondersteunen (bytes naar char omzetten?)
+	        InputStream socketInBytes = socket.getInputStream();
+	        FileOutputStream writerBytes = new FileOutputStream("TestImage.png");
+    		String newLine2;
 
 			
            
@@ -94,7 +105,7 @@ public class Client {
         }
     }
 	
-	
+	//check if the given string is a representation of a hexadecimal number
 	public static boolean isHexadecimal(String nb) {
 		try {
 			Long.parseLong(nb, 16);
@@ -105,7 +116,8 @@ public class Client {
 		}
 	}
 	
-	public static boolean isChunkSize(String line) {
+	//check if the given string contains the current chunk size
+	public static boolean containsChunkSize(String line) {
 		int indexOfFirstSemiColon = line.indexOf(";");
 		if (indexOfFirstSemiColon == -1) {
 			//no semicolon in line
